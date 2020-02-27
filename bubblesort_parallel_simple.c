@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 		/* read data from file */
 		int i;
 		for(i = 0; i < size; i++) {
-			fscanf(fp, "%d", arr[i]);
+			fscanf(fp, "%d", &arr[i]);
 		}
 		/* reading is complete, so close the file */
 		fclose(fp);
@@ -104,6 +104,7 @@ int main(int argc, char** argv) {
 	if(id == 0) {
 		/* print output to file: assume output file name is output.txt */
 		FILE* outfile = fopen("output.txt", "w");
+		int i;
 		for(i = 0; i < size; i++) {
 			fprintf(outfile, "%d\n", arr[i]);
 		}

@@ -189,7 +189,7 @@ void compare_split(int* self_arr, int size, int self_id, int rank1, int rank2) {
 	/* Possible improvement below: merge the if-else branches, ignore sorting of non-required array */
 	if(self_id == rank1) {
 		/* self_arr stores smallest elements in sorted order */
-		for (gap = nextGap(gap); gap > 0; gap = nextGap(gap)) { 
+		for (gap = next_gap(gap); gap > 0; gap = next_gap(gap)) { 
 			/* comparing elements in the first array */ 
 			for (i = 0; i + gap < size; i++) {
 				if (self_arr[i] > self_arr[i + gap]) { 
@@ -219,7 +219,7 @@ void compare_split(int* self_arr, int size, int self_id, int rank1, int rank2) {
 	} else {
 		/* self_arr stores largest elements, sorted in ascending order */
 				/* self_arr stores smallest elements in sorted order */
-		for (gap = nextGap(gap); gap > 0; gap = nextGap(gap)) { 
+		for (gap = next_gap(gap); gap > 0; gap = next_gap(gap)) { 
 			/* comparing elements in the first array */ 
 			for (i = 0; i + gap < size; i++) {
 				if (other_arr[i] > other_arr[i + gap]) { 
@@ -291,7 +291,7 @@ int  main(int argc, char** argv) {
 		/* read data from file */
 		int i;
 		for(i = 0; i < size; i++) {
-			fscanf(fp, "%d", arr[i]);
+			fscanf(fp, "%d", &arr[i]);
 		}
 		/* reading is complete, so close the file */
 		fclose(fp);
