@@ -259,8 +259,13 @@ int  main(int argc, char** argv) {
 	int* chunk;
 	double time_taken;
 
+	/* Initialize MPI */
 	MPI_Init(&argc, &argv);
+
+	/* Get number of processes */
 	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
+
+	/* Get current process id */
 	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
 	if(id == 0) {
