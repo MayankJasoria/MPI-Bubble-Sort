@@ -110,7 +110,8 @@ int main(int argc, char** argv) {
 		fclose(outfile);
 	}
 
+    /* All operations completed. Clean up MPI state */
 	MPI_Finalize();
-    
+
     return 0;
 }
