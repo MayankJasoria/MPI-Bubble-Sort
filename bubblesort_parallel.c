@@ -329,10 +329,48 @@ int  main(int argc, char** argv) {
 		} else {
 			compare_split(chunk, chunk_size, id, other_rank, id);
 		}
+		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
+		// MPI_Barrier(MPI_COMM_WORLD);
 	}
 
-	/* TODO: perform odd-even transposition */
-	
+	/* TODO: find a way to limit number of iterations */
+	for(i = 0; i < num_proc; i++) {
+		if(i%2 == 0) {
+			/* even to odd transposition */
+			if(id % 2 == 0 && id < num_proc - 1) {
+				compare_split(chunk, chunk_size, id, id, id+1);
+			} else {
+				compare_split(chunk, chunk_size, id, id-1, id);
+			}
+		} else {
+			/* odd to even transposition */
+			if(id % 2 == 1 && id < num_proc - 1) {
+				compare_split(chunk, chunk_size, id, id, id+1);
+			} else if(id > 0) {
+				compare_split(chunk, chunk_size, id, id-1, id);
+			}
+		}
+		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
+		// MPI_Barrier(MPI_COMM_WORLD);
+	}
+
+	/* sorting ends, merge results into root */
+	if(id == 0) {
+		arr = (int*) malloc(num_proc * chunk_size * sizeof(int));
+	}
+
+	MPI_Gather(chunk, chunk_size, MPI_INT, arr, (chunk_size * num_proc), MPI_INT, 0, MPI_COMM_WORLD);
+
+	/* stop timer */
+	time_taken = MPI_Wtime() - time_taken;
+
+	if(id == 0) {
+		/* print output to file: assume output file name is output.txt */
+		FILE* outfile = fopen("output.txt", "w");
+		for(i = 0; i < size; i++) {
+			fprintf(outfile, "%d\n", arr[i]);
+		}
+	}
 
 	MPI_Finalize();
 }
