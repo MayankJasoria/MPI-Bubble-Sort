@@ -375,6 +375,7 @@ int  main(int argc, char** argv) {
 		for(i = 0; i < size; i++) {
 			fprintf(outfile, "%d\n", arr[i]);
 		}
+		fclose(outfile);
 	}
 
 	MPI_Finalize();
