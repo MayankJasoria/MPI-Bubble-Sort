@@ -86,10 +86,15 @@ int main(int argc, char** argv) {
 	MPI_Scatter(arr, chunk_size, MPI_INT, chunk, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
 
 	/* no need to maintain original array */
-	free(arr);
+	if(id == 0) {
+		free(arr);
+	}
 
     /* bubblesort the chunk of data in each process */
     bubblesort(chunk, chunk_size);
+
+	/* Synchronization may be needed post sorting */
+	MPI_Barrier(MPI_COMM_WORLD);
 
     /* sorting ends, merge results into root */
 	if(id == 0) {

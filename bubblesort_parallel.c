@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * Finds a pivot element based on the 'best of 3' approach: 
@@ -86,10 +87,6 @@ void partition(int* arr, int start, int end, int* left, int* right) {
 			*right += 1;
 		}
 	}
-	for(int i = start; i <= end; i++) {
-	    printf("%d, ", arr[i]);
-	}
-	printf("]\n");
 }
 
 /**
@@ -157,8 +154,13 @@ int next_gap(int gap) {
 }
 
 /**
- * Perfons compare and exchange of data among two given processes so that all
+ * Performs compare and exchange of data among two given processes so that all
  * elements of one process become smaller than all elements of the other process
+ * @param self_arr	The array of the current process
+ * @param size		The size of array contained in current process
+ * @param self_id	The rank of current process
+ * @param rank1		The process which should have all smaller elements
+ * @param rank2		The process which should have all larger elements
  */
 void compare_split(int* self_arr, int size, int self_id, int rank1, int rank2) {
 	/* both processes send their data to the other one (assume same size of both) */
@@ -317,66 +319,111 @@ int  main(int argc, char** argv) {
 	MPI_Scatter(arr, chunk_size, MPI_INT, chunk, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
 
 	/* no need to maintain original array */
-	free(arr);
+	if(id == 0) {
+		free(arr);
+	}
 
 	/* sort the chunk of data in each process */
 	quicksort(chunk, 0, chunk_size-1);
 
+	/* Synchronizing processes post individual sorting */
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	/* perform shell sort */
 	int i = 1;
-	int partition_size = num_proc;
-	for(i = 1; i < num_proc; i *= 2, ((partition_size % 2 == 0) ? (partition_size /= 2) : (partition_size = (partition_size / 2) + 1))) { // log_2 (P) steps
-		/* compute rank of other process */
-		int diff = id - ((id / partition_size) * (partition_size));
-		int other_rank = ((id / partition_size) + 1) * partition_size - (diff + 1);
-		if(other_rank > id) {
-			compare_split(chunk, chunk_size, id, id, other_rank);
-		} else {
-			compare_split(chunk, chunk_size, id, other_rank, id);
-		}
-		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
-		// MPI_Barrier(MPI_COMM_WORLD);
-	}
+	// int partition_size = num_proc;
+	// for(i = 1; i < num_proc; i *= 2, ((partition_size % 2 == 0) ? (partition_size /= 2) : (partition_size = (partition_size / 2) + 1))) { // log_2 (P) steps
+	// 	/* compute rank of other process */
+	// 	int diff = id - ((id / partition_size) * (partition_size));
+	// 	int other_rank = ((id / partition_size) + 1) * partition_size - (diff + 1);
+	// 	if(other_rank > id) {
+	// 		compare_split(chunk, chunk_size, id, id, other_rank);
+	// 	} else {
+	// 		compare_split(chunk, chunk_size, id, other_rank, id);
+	// 	}
+	// 	/* Synchronize may be needed after each iteration: uncomment below to synchronize */
+	// 	MPI_Barrier(MPI_COMM_WORLD);
+	// }
+
+	
 
 	/* TODO: find a way to limit number of iterations */
 	for(i = 0; i < num_proc; i++) {
 		if(i%2 == 0) {
 			/* even to odd transposition */
-			if(id % 2 == 0 && id < num_proc - 1) {
+			if((id % 2 == 0) && (id < num_proc - 1)) {
 				compare_split(chunk, chunk_size, id, id, id+1);
-			} else {
+			} else if (id % 2 == 1) {
 				compare_split(chunk, chunk_size, id, id-1, id);
 			}
 		} else {
 			/* odd to even transposition */
-			if(id % 2 == 1 && id < num_proc - 1) {
+			if((id % 2 == 1) && (id < num_proc - 2)) {
 				compare_split(chunk, chunk_size, id, id, id+1);
-			} else if(id > 0) {
+			} else if((id %2 == 0) && (id > 0)) {
 				compare_split(chunk, chunk_size, id, id-1, id);
 			}
 		}
 		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
-		// MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	/* sorting ends, merge results into root */
 	if(id == 0) {
 		arr = (int*) malloc(num_proc * chunk_size * sizeof(int));
+		memset(arr, 0, chunk_size * num_proc * sizeof(int)); // TODO: Remove this line
 	}
 
+	/* DEBUGGING: Each process writes its results into separate file */
+	char filename[12];
+	strcpy(filename, "output");
+	filename[6] = (char)(id + '0');
+	filename[7] = '.';
+	filename[8] = 't';
+	filename[9] = 'x';
+	filename[10] = 't';
+	filename[11] = '\0';
+
+	FILE* fptr = fopen(filename, "w");
+	fprintf(fptr, "[");
+	for(int j = 0; j < chunk_size; j++) {
+		fprintf(fptr, "%d ", chunk[j]);
+	}
+	fprintf(fptr, "]\n");
+
+	fprintf(fptr, "Chunk Size: %d\n", chunk_size);
+	fprintf(fptr, "chunk_size * num_prec = %d", chunk_size * num_proc);
+
+	fclose(fptr);
+
+	/* aggregate results from all processes */
 	MPI_Gather(chunk, chunk_size, MPI_INT, arr, (chunk_size * num_proc), MPI_INT, 0, MPI_COMM_WORLD);
 
-	/* stop timer */
-	time_taken = MPI_Wtime() - time_taken;
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	if(id == 0) {
+
+		/* DEBUG */
+		printf("Communicator Size: %d\n", num_proc);
+		/* DEBUG ENDS */
+
 		/* print output to file: assume output file name is output.txt */
 		FILE* outfile = fopen("output.txt", "w");
 		for(i = 0; i < size; i++) {
 			fprintf(outfile, "%d\n", arr[i]);
 		}
 		fclose(outfile);
+
+		printf("Time taken for execution: %f\n", time_taken);
 	}
+
+	/* stop timer */
+	time_taken = MPI_Wtime() - time_taken;
+
+	/* All processes have shared their data, individual chunks not needed anymore */
+	// free(chunk);
 
 	/* All operations completed. Clean up MPI state */
 	MPI_Finalize();
