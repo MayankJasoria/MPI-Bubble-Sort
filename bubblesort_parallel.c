@@ -331,19 +331,19 @@ int  main(int argc, char** argv) {
 
 	/* perform shell sort */
 	int i = 1;
-	// int partition_size = num_proc;
-	// for(i = 1; i < num_proc; i *= 2, ((partition_size % 2 == 0) ? (partition_size /= 2) : (partition_size = (partition_size / 2) + 1))) { // log_2 (P) steps
-	// 	/* compute rank of other process */
-	// 	int diff = id - ((id / partition_size) * (partition_size));
-	// 	int other_rank = ((id / partition_size) + 1) * partition_size - (diff + 1);
-	// 	if(other_rank > id) {
-	// 		compare_split(chunk, chunk_size, id, id, other_rank);
-	// 	} else {
-	// 		compare_split(chunk, chunk_size, id, other_rank, id);
-	// 	}
-	// 	/* Synchronize may be needed after each iteration: uncomment below to synchronize */
-	// 	MPI_Barrier(MPI_COMM_WORLD);
-	// }
+	int partition_size = num_proc;
+	for(i = 1; i < num_proc; i *= 2, ((partition_size % 2 == 0) ? (partition_size /= 2) : (partition_size = (partition_size / 2) + 1))) { // log_2 (P) steps
+		/* compute rank of other process */
+		int diff = id - ((id / partition_size) * (partition_size));
+		int other_rank = ((id / partition_size) + 1) * partition_size - (diff + 1);
+		if(other_rank > id) {
+			compare_split(chunk, chunk_size, id, id, other_rank);
+		} else {
+			compare_split(chunk, chunk_size, id, other_rank, id);
+		}
+		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
 
 	
 
