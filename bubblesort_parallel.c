@@ -118,7 +118,8 @@ int* merge(int* arr1, int size1, int* arr2, int size2) {
 	int first = 0;
 	int second = 0;
 	int sort_index = 0;
-	int* sorted = (int*) malloc(sizeof(int) * (size1 + size2));
+	int* sorted;
+	MPI_Alloc_mem(sizeof(int) * (size1 + size2), MPI_INFO_NULL, &sorted);
 	while(first < size1 && second < size2) {
 		if(arr1[first] < arr2[second]) {
 			sorted[sort_index++] = arr1[first++];
@@ -288,7 +289,7 @@ int  main(int argc, char** argv) {
 		}
 
 		/* create array of size such that all processes receive equal parts */
-		arr = (int*) malloc(chunk_size * num_proc * sizeof(int));
+		MPI_Alloc_mem(chunk_size * num_proc * sizeof(int), MPI_INFO_NULL, &arr);
 
 		/* read data from file */
 		int i;
@@ -314,13 +315,13 @@ int  main(int argc, char** argv) {
 	MPI_Bcast(&chunk_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 	/* scatter the input array to all processes */
-	chunk = (int*) malloc(chunk_size * sizeof(int));
+	MPI_Alloc_mem(chunk_size * sizeof(int), MPI_INFO_NULL, &chunk);
 
 	MPI_Scatter(arr, chunk_size, MPI_INT, chunk, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
 
 	/* no need to maintain original array */
 	if(id == 0) {
-		free(arr);
+		MPI_Free_mem(arr);
 	}
 
 	/* sort the chunk of data in each process */
@@ -345,8 +346,7 @@ int  main(int argc, char** argv) {
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
-	
-
+	/* Perform odd-even transposition */
 	/* TODO: find a way to limit number of iterations */
 	for(i = 0; i < num_proc; i++) {
 		if(i%2 == 0) {
@@ -368,46 +368,28 @@ int  main(int argc, char** argv) {
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	/* Sorting ends, collect output */
+	// MPI_Barrier(MPI_COMM_WORLD);
 
 	/* sorting ends, merge results into root */
 	if(id == 0) {
-		arr = (int*) malloc(num_proc * chunk_size * sizeof(int));
+		MPI_Alloc_mem(num_proc * chunk_size * sizeof(int), MPI_INFO_NULL, &arr);
 		memset(arr, 0, chunk_size * num_proc * sizeof(int)); // TODO: Remove this line
 	}
 
-	/* DEBUGGING: Each process writes its results into separate file */
-	char filename[12];
-	strcpy(filename, "output");
-	filename[6] = (char)(id + '0');
-	filename[7] = '.';
-	filename[8] = 't';
-	filename[9] = 'x';
-	filename[10] = 't';
-	filename[11] = '\0';
-
-	FILE* fptr = fopen(filename, "w");
-	fprintf(fptr, "[");
-	for(int j = 0; j < chunk_size; j++) {
-		fprintf(fptr, "%d ", chunk[j]);
-	}
-	fprintf(fptr, "]\n");
-
-	fprintf(fptr, "Chunk Size: %d\n", chunk_size);
-	fprintf(fptr, "chunk_size * num_prec = %d", chunk_size * num_proc);
-
-	fclose(fptr);
-
 	/* aggregate results from all processes */
-	MPI_Gather(chunk, chunk_size, MPI_INT, arr, (chunk_size * num_proc), MPI_INT, 0, MPI_COMM_WORLD);
+	int status = MPI_Gather(chunk, chunk_size, MPI_INT, arr, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
+
+	/* allocated memory chunk no longer needed */
+	MPI_Free_mem(chunk);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	if(id == 0) {
 
-		/* DEBUG */
-		printf("Communicator Size: %d\n", num_proc);
-		/* DEBUG ENDS */
+		// /* DEBUG */
+		printf("Communicator Size: %d\nMPI_Gather status: %d\n", num_proc, status);
+		// /* DEBUG ENDS */
 
 		/* print output to file: assume output file name is output.txt */
 		FILE* outfile = fopen("output.txt", "w");
@@ -423,7 +405,7 @@ int  main(int argc, char** argv) {
 	time_taken = MPI_Wtime() - time_taken;
 
 	/* All processes have shared their data, individual chunks not needed anymore */
-	// free(chunk);
+	// MPI_Free_mem(chunk);
 
 	/* All operations completed. Clean up MPI state */
 	MPI_Finalize();
