@@ -171,12 +171,12 @@ void compare_split(int* self_arr, int size, int self_id, int rank1, int rank2) {
 		self_arr,
 		size,
 		MPI_INT, 
-		((self_id == rank1) ? rank2 : rank1), 
-		0, 
-		other_arr, 
-		size, 
-		MPI_INT, 
-		((self_id == rank1) ? rank2 : rank1), 
+		((self_id == rank1) ? rank2 : rank1),
+		0,
+		other_arr,
+		size,
+		MPI_INT,
+		((self_id == rank1) ? rank2 : rank1),
 		0,
 		MPI_COMM_WORLD, 
 		&status
@@ -335,41 +335,60 @@ int  main(int argc, char** argv) {
 
 	/* perform shell sort */
 	int i = 1;
-	int partition_size = num_proc;
-	for(i = 1; i < num_proc; i *= 2, ((partition_size % 2 == 0) ? (partition_size /= 2) : (partition_size = (partition_size / 2) + 1))) { // log_2 (P) steps
-		/* compute rank of other process */
-		int diff = id - ((id / partition_size) * (partition_size));
-		int other_rank = ((id / partition_size) + 1) * partition_size - (diff + 1);
-		if(other_rank > id) {
-			compare_split(chunk, chunk_size, id, id, other_rank);
+	// int partition_size = num_proc;
+	// for(i = 1; i < num_proc; i *= 2, ((partition_size % 2 == 0) ? (partition_size /= 2) : (partition_size = (partition_size / 2) + 1))) { // log_2 (P) steps
+	// 	/* compute rank of other process */
+	// 	int diff = id - ((id / partition_size) * (partition_size));
+	// 	int other_rank = ((id / partition_size) + 1) * partition_size - (diff + 1);
+	// 	if(other_rank > id) {
+	// 		compare_split(chunk, chunk_size, id, id, other_rank);
+	// 	} else {
+	// 		compare_split(chunk, chunk_size, id, other_rank, id);
+	// 	}
+	// 	/* Synchronize may be needed after each iteration: uncomment below to synchronize */
+	// 	MPI_Barrier(MPI_COMM_WORLD);
+	// }
+
+	/* Perform odd-even transposition */
+	/* TODO: find a way to limit number of iterations */
+	// char fname[11];
+	// strcpy(fname, "debug");
+	// fname[5] = (char) id + '0';
+	// fname[6] = '.';
+	// fname[7] = 't';
+	// fname[8] = 'x';
+	// fname[9] = 't';
+	// fname[10] = '\0';
+	// FILE* debugfile = fopen(fname, "w");
+	for(i = 0; i < num_proc; i++) {
+		if(i%2 == 0) {
+			/* even to odd transposition */
+			if((id % 2 == 0) && (id < num_proc - 1)) {
+				// fprintf(debugfile, "i: %d, self_id: %d, rank1: %d, rank2: %d\n",i, id, id, id+1);
+				// fflush(debugfile);
+				compare_split(chunk, chunk_size, id, id, id+1);
+			} else if (id % 2 == 1) {
+				// fprintf(debugfile, "i: %d, self_id: %d, rank1: %d, rank2: %d",i, id, id-1, id);
+				// fflush(debugfile);
+				compare_split(chunk, chunk_size, id, id-1, id);
+			}
 		} else {
-			compare_split(chunk, chunk_size, id, other_rank, id);
+			/* odd to even transposition */
+			if((id % 2 == 1) && (id <= num_proc - 2)) {
+				// fprintf(debugfile, "o: %d, self_id: %d, rank1: %d, rank2: %d",i, id, id, id+1);
+				// fflush(debugfile);
+				compare_split(chunk, chunk_size, id, id, id+1);
+			} else if((id %2 == 0) && (id > 0)) {
+				// fprintf(debugfile, "i: %d, self_id: %d, rank1: %d, rank2: %d",i, id, id-1, id);
+				// fflush(debugfile);
+				compare_split(chunk, chunk_size, id, id-1, id);
+			}
 		}
 		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
-	/* Perform odd-even transposition */
-	/* TODO: find a way to limit number of iterations */
-	for(i = 0; i < num_proc; i++) {
-		if(i%2 == 0) {
-			/* even to odd transposition */
-			if((id % 2 == 0) && (id < num_proc - 1)) {
-				compare_split(chunk, chunk_size, id, id, id+1);
-			} else if (id % 2 == 1) {
-				compare_split(chunk, chunk_size, id, id-1, id);
-			}
-		} else {
-			/* odd to even transposition */
-			if((id % 2 == 1) && (id < num_proc - 2)) {
-				compare_split(chunk, chunk_size, id, id, id+1);
-			} else if((id %2 == 0) && (id > 0)) {
-				compare_split(chunk, chunk_size, id, id-1, id);
-			}
-		}
-		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
-		MPI_Barrier(MPI_COMM_WORLD);
-	}
+	// fclose(debugfile);
 
 	/* Sorting ends, collect output */
 	// MPI_Barrier(MPI_COMM_WORLD);
@@ -386,7 +405,7 @@ int  main(int argc, char** argv) {
 	/* allocated memory chunk no longer needed */
 	MPI_Free_mem(chunk);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	// MPI_Barrier(MPI_COMM_WORLD);
 
 	if(id == 0) {
 
