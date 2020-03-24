@@ -273,8 +273,11 @@ int  main(int argc, char** argv) {
 
 	if(id == 0) {
 		/* read imput file */
-		/* assumption: input file is always input.txt, output file is always output.txt */
-		FILE* fp = fopen("input.txt", "r");
+		// /* assumption: input file is always input.txt, output file is always output.txt */
+		// FILE* fp = fopen("input.txt", "r");
+
+		/* Open the input file specified as command line argument */
+		FILE* fp = fopen(argv[1], "r");
 		/* assumption: first line specifies number of integers in the file */
 		fscanf(fp, "%d", &size);
 
