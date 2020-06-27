@@ -273,8 +273,6 @@ int  main(int argc, char** argv) {
 
 	if(id == 0) {
 		/* read imput file */
-		// /* assumption: input file is always input.txt, output file is always output.txt */
-		// FILE* fp = fopen("input.txt", "r");
 
 		/* Open the input file specified as command line argument */
 		FILE* fp = fopen(argv[1], "r");
@@ -350,48 +348,25 @@ int  main(int argc, char** argv) {
 	// }
 
 	/* Perform odd-even transposition */
-	/* TODO: find a way to limit number of iterations */
-	// char fname[11];
-	// strcpy(fname, "debug");
-	// fname[5] = (char) id + '0';
-	// fname[6] = '.';
-	// fname[7] = 't';
-	// fname[8] = 'x';
-	// fname[9] = 't';
-	// fname[10] = '\0';
-	// FILE* debugfile = fopen(fname, "w");
 	for(i = 0; i < num_proc; i++) {
 		if(i%2 == 0) {
 			/* even to odd transposition */
 			if((id % 2 == 0) && (id < num_proc - 1)) {
-				// fprintf(debugfile, "i: %d, self_id: %d, rank1: %d, rank2: %d\n",i, id, id, id+1);
-				// fflush(debugfile);
 				compare_split(chunk, chunk_size, id, id, id+1);
 			} else if (id % 2 == 1) {
-				// fprintf(debugfile, "i: %d, self_id: %d, rank1: %d, rank2: %d",i, id, id-1, id);
-				// fflush(debugfile);
 				compare_split(chunk, chunk_size, id, id-1, id);
 			}
 		} else {
 			/* odd to even transposition */
 			if((id % 2 == 1) && (id <= num_proc - 2)) {
-				// fprintf(debugfile, "o: %d, self_id: %d, rank1: %d, rank2: %d",i, id, id, id+1);
-				// fflush(debugfile);
 				compare_split(chunk, chunk_size, id, id, id+1);
 			} else if((id %2 == 0) && (id > 0)) {
-				// fprintf(debugfile, "i: %d, self_id: %d, rank1: %d, rank2: %d",i, id, id-1, id);
-				// fflush(debugfile);
 				compare_split(chunk, chunk_size, id, id-1, id);
 			}
 		}
 		/* Synchronize may be needed after each iteration: uncomment below to synchronize */
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
-
-	// fclose(debugfile);
-
-	/* Sorting ends, collect output */
-	// MPI_Barrier(MPI_COMM_WORLD);
 
 	/* sorting ends, merge results into root */
 	if(id == 0) {
@@ -402,16 +377,13 @@ int  main(int argc, char** argv) {
 	/* aggregate results from all processes */
 	int status = MPI_Gather(chunk, chunk_size, MPI_INT, arr, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
 
+	/* stop timer */
+	time_taken = MPI_Wtime() - time_taken;
+
 	/* allocated memory chunk no longer needed */
 	MPI_Free_mem(chunk);
 
-	// MPI_Barrier(MPI_COMM_WORLD);
-
 	if(id == 0) {
-
-		// /* DEBUG */
-		printf("Communicator Size: %d\nMPI_Gather status: %d\n", num_proc, status);
-		// /* DEBUG ENDS */
 
 		/* print output to file: assume output file name is output.txt */
 		FILE* outfile = fopen("output.txt", "w");
@@ -420,14 +392,8 @@ int  main(int argc, char** argv) {
 		}
 		fclose(outfile);
 
-		printf("Time taken for execution: %f\n", time_taken);
+		printf("Time taken for execution is %lf seconds\n", time_taken);
 	}
-
-	/* stop timer */
-	time_taken = MPI_Wtime() - time_taken;
-
-	/* All processes have shared their data, individual chunks not needed anymore */
-	// MPI_Free_mem(chunk);
 
 	/* All operations completed. Clean up MPI state */
 	MPI_Finalize();
