@@ -19,5 +19,5 @@ At the end of the prevous operation, the results of all processes are combined i
 Before odd-even transposition, shell-sort may be performed for log p (base 2) no. of iterations, where p is the number of processes. In this technique,  processes at the end exchange data instead of the order used in odd-even transposition, and at the end of each iteration, the ends are divided into two segments, with each segment performing the next steo pf shell-sorting independently of the other segment. Post this, odd-even transposition may be required for lesser number of iterations, to be stopped whenever there is no exchange of data at some step, or till p iterations, whichever occurs earlier. While this technique is slightly slower in the worst case, it turns out to be generally faster. {The code for shell-sort is kept commented in the current file}.
 
 ## Executing the code
- * To compile the code, run `mpicc bubblesort_parallel.c`
+ * To compile the code, run `mpicc bubblesort_parallel.c`. Alternatly, run `make`
  * To execute the code (post compilation), run `mpirun -np <no_processes> a.out <input_filepath>`, where `no_processes` is the number of processes that should be launched, and `input_filepath` is the path to the input file.
